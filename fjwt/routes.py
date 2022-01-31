@@ -12,14 +12,14 @@ def token_required(f):
     def decorated(*args, **kwargs):
         token = None
 
-        if 'x-access-token' in request.headers:
+        if "x-access-token" in request.headers:
             token = request.headers['x-access-token']
 
         if not token:
             return jsonify({"message" : "Token missing"}), 401
 
         try:
-            data = jwt.decode(token, app.config['SECRET_KEY'])
+            data = jwt.decode(token, app.config["SECRET_KEY"],algorithms="HS256")
             current_user = Users.query.filter_by(email=data['email']).first()
 
         except:
@@ -34,22 +34,27 @@ def token_required(f):
 def login():
     data =  request.get_json()
 
-    email = data['username']
+    email = data['email']
     password = data['password']
 
     user = Users.query.filter_by(email=email).first()
 
     if user and bcrypt.check_password_hash(user.password, password):
         token = jwt.encode({
-            'user_id' : user.user_id,
+            'email' : user.email,
             'exp' :datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
-        }, app.config["SECRET_KEY"])
+        },
+        
+         app.config["SECRET_KEY"],
+         "HS256")
+
         return token
+    
     return ""
 
-@app.route("/about")
+@app.route("/about", methods=['GET'])
 @token_required
-def about():
+def about(current_user):
     return jsonify({
         "Message": "Authenticated"
     })

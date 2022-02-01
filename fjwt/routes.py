@@ -1,5 +1,6 @@
-from flask import jsonify, request, jsonify, make_response
-from flask_login import current_user
+from os import access
+from flask import jsonify, request, jsonify, make_response, Response, session
+# from flask_login import current_user
 from fjwt import app, bcrypt
 from fjwt.models import Users
 import jwt
@@ -10,22 +11,30 @@ from functools import wraps
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = None
 
-        if "x-access-token" in request.headers:
-            token = request.headers['x-access-token']
+        # if "x-access-token" in request.headers:
+        #     token = request.headers['x-access-token']
 
-        if not token:
+        if 'token' not in session:
             return jsonify({"message" : "Token missing"}), 401
 
-        try:
-            data = jwt.decode(token, app.config["SECRET_KEY"],algorithms="HS256")
-            current_user = Users.query.filter_by(email=data['email']).first()
+        
+        token = session['token']
+        # print (token)
+        data = jwt.decode(token, app.config["SECRET_KEY"],algorithms="HS256")
+        current_user = Users.query.filter_by(email=data['email']).first()
 
-        except:
-            return jsonify({
-                "Message" : "Token is inavalid"
-            }), 401
+        # if not session:
+        #     return jsonify({"message" : "Token missing"}), 401
+
+        # try:
+        #     data = jwt.decode(session, app.config["SECRET_KEY"],algorithms="HS256")
+        #     current_user = Users.query.filter_by(email=data['email']).first()
+
+        # except:
+        #     return jsonify({
+        #         "Message" : "Token is inavalid"
+        #     }), 401
 
         return f(current_user, *args, **kwargs)
     return decorated
@@ -40,21 +49,25 @@ def login():
     user = Users.query.filter_by(email=email).first()
 
     if user and bcrypt.check_password_hash(user.password, password):
-        token = jwt.encode({
-            'email' : user.email,
-            'exp' :datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
-        },
-        
-         app.config["SECRET_KEY"],
-         "HS256")
+        token = jwt.encode({'email' : user.email, \
+            'exp' :datetime.datetime.utcnow() + datetime.timedelta(seconds=30)},
+            app.config["SECRET_KEY"],
+            algorithm="HS256")
 
-        return token
+        print(token)
+
+        session['token'] = token
+
+        # return token
     
-    return ""
+    return ''
 
 @app.route("/about", methods=['GET'])
 @token_required
 def about(current_user):
+
+    print(current_user)
+
     return jsonify({
         "Message": "Authenticated"
     })

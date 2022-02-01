@@ -35,5 +35,5 @@ class Users(db.Model):
         db.session.commit()
         return self
 
-    def __repr__(self):
-        return f"{self.department_id}"
+    # def __repr__(self):
+    #     return f"{self.department_id}"
